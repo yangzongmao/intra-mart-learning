@@ -14,5 +14,6 @@
 * 開発ツール(eBuilder)   
   <http://www.intra-mart.jp/download/product/ebuilder/eBuilder8-win32.win32.x86_64.zip>   
   
-* 関連ドキュメント（ガイドなど）ダウンロードリンク  
-  <http://www.intra-mart.jp/download/product/index_v72.html>   
+* 関連ドキュメント（ガイドなど）ダウンロードリンク   
+  <http://www.intra-mart.jp/download/product/index_v72.html>  
+  

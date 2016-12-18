@@ -17,3 +17,11 @@
 * 関連ドキュメント（ガイドなど）ダウンロードリンク   
   <http://www.intra-mart.jp/download/product/index_v72.html>  
   
+* resin-4.0.49  
+  <http://www.caucho.com/download/resin-4.0.49.zip>  
+  
+* postgressql  
+  <http://get.enterprisedb.com/postgresql/postgresql-9.5.5-1-windows-x64.exe>  
+  
+* Apache Cassandra 1.1.12  
+  <http://archive.apache.org/dist/cassandra/1.1.12/apache-cassandra-1.1.12-bin.tar.gz>

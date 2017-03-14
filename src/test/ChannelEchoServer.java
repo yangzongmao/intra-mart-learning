@@ -80,5 +80,16 @@ class ChannelEchoThread implements Runnable {
 			}
 		}
 	}
+	
+	final Object res = context.handleNext(data);
+
+	Object obj = context.getCurrentRequestObject();
+
+	if (obj != null && obj instanceof HttpRequestWrapper) {
+		String[] token = ((HttpRequestWrapper) obj).getParam(TokenUtil.KEY_HIDDEN_TOKEN);
+		if (token != null && token.length > 0 && StringUtil.isNullOrEmpty(token[0])) {
+
+		}
+	}
 
 }

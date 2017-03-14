@@ -83,13 +83,45 @@ class ChannelEchoThread implements Runnable {
 	
 	final Object res = context.handleNext(data);
 
-	Object obj = context.getCurrentRequestObject();
+			if (res != null && res instanceof HttpResponse) {
+			ResourceLocator contentPath = ((HttpResponse) res).getContentPath();
+			String path = contentPath.getPath();
 
-	if (obj != null && obj instanceof HttpRequestWrapper) {
-		String[] token = ((HttpRequestWrapper) obj).getParam(TokenUtil.KEY_HIDDEN_TOKEN);
-		if (token != null && token.length > 0 && StringUtil.isNullOrEmpty(token[0])) {
+			try {
+				HttpRequestWrapper requestObject = (HttpRequestWrapper)context.getCurrentRequestObject();
 
+				Field servletRequestField = requestObject.getClass().getDeclaredField("servletRequest");
+				servletRequestField.setAccessible(true);
+				NablarchHttpServletRequestWrapper nablarchHttpServletRequestWrapper = (NablarchHttpServletRequestWrapper)servletRequestField.get(requestObject);
+
+				InputStream fis = nablarchHttpServletRequestWrapper.getRequest().getServletContext().getResourceAsStream(path);
+				// FileInputStream fis = new FileInputStream(path);
+				// InputStream fis = this.getClass().getClassLoader().getResourceAsStream(path);
+				InputStreamReader Inputreader = new InputStreamReader(fis, "utf-8");
+				BufferedReader br = new BufferedReader(Inputreader);
+
+				String temp = br.readLine();
+
+				StringBuffer jspData = new StringBuffer();
+
+				while (temp != null) {
+					jspData.append(temp);
+					temp = br.readLine();
+				}
+
+				br.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
-	}
+
+		Object obj = context.getCurrentRequestObject();
+
+		if (obj != null && obj instanceof HttpRequestWrapper) {
+			String[] token = ((HttpRequestWrapper) obj).getParam(TokenUtil.KEY_HIDDEN_TOKEN);
+			if (token != null && token.length > 0 && StringUtil.isNullOrEmpty(token[0])) {
+
+			}
+		}
 
 }

@@ -17,3 +17,6 @@ spec:
         image: nginx:1.14.2
         ports:
         - containerPort: 80
+        
+        
+     curl -sLO https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/audit/audit-policy.yaml

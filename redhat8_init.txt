@@ -1,0 +1,266 @@
+■タイムゾーン						
+					
+$ sudo timedatectl set-timezone  Asia/Tokyo					
+$ sudo timedatectl					
+					
+■選択できるタイムゾーンの一覧を確認					
+	$ sudo timedatectl list-timezones				
+					
+	$ date				
+					
+■ホスト名						
+■ホスト名は、hostnamectlで設定します。 staticをつけると、従来のhostnameと同じ動作で、/etc/hostnameに保存されます。					
+					
+	$ sudo hostnamectl set-hostname --static dmp-gap01				
+					
+■リブートしてもホスト名を維持するように、cloud-initの設定を変更します。					
+					
+	$ sudo echo 'preserve_hostname: true' >> /etc/cloud/cloud.cfg				
+					
+■時刻同期						
+$ sudo yum erase 'ntp*'					
+$ sudo yum install chrony					
+$ sudo echo '#Add TimeSync' >> /etc/chrony.conf					
+$ sudo echo 'server 169.254.169.123 prefer iburst' >> /etc/chrony.conf					
+					
+■chronyd ステータスの確認					
+	$ sudo systemctl status chronyd				
+					
+					
+■chronyd の起動					
+	$ systemctl start chronyd				
+					
+■chronyd をシステム起動時に自動的に起動する					
+	$ systemctl enable chronyd				
+					
+■chronyd の停止					
+	$ systemctl stop chronyd				
+					
+■システム起動時に自動的に起動しないようにする					
+	$ systemctl disable chronyd				
+					
+■文字コード						
+$ sudo localectl set-locale LANG=ja_JP.utf8					
+					
+■確認					
+	$ sudo localectl status				
+					
+■Apache Httpd						
+					
+sudo yum -y install httpd					
+					
+sudo yum -y install java-1.8.0-openjdk-devel					
+					
+sudo yum -y install wget					
+					
+					
+sudo wget https://www-eu.apache.org/dist/tomcat/tomcat-8/v8.5.37/bin/apache-tomcat-8.5.37.tar.gz					
+sudo tar -xzvf apache-tomcat-8.5.37.tar.gz					
+sudo mv apache-tomcat-8.5.37/* tomcat/					
+sudo rm -rf apache-tomcat-8.5.37					
+sudo rm -rf apache-tomcat-8.5.37.tar.gz					
+					
+					
+Environment="CATALINA_OPTS=-server -Xms2048m -Xmx4096m -XX:MetaspaceSize=1024M -XX:MaxMetaspaceSize=2048M"					
+					
+/etc/systemd/system/tomcat-ins1.service					
+					
+					
+[Unit]					
+Description=Apache Tomcat 8					
+After=network.target					
+					
+[Service]					
+Environment="CATALINA_HOME=/opt/tomcat"					
+Environment="CATALINA_BASE=/opt/tomcat-ins1"					
+					
+User=tomcat					
+Group=tomcat					
+Type=oneshot					
+PIDFile=/opt/tomcat/tomcat.pid					
+RemainAfterExit=yes					
+ExecStart=/opt/tomcat/bin/startup.sh					
+ExecStop=/opt/tomcat/bin/shutdown.sh					
+ExecReStart=/opt/tomcat/bin/shutdown.sh;/opt/tomcat/bin/startup.sh					
+					
+[Install]					
+WantedBy=multi-user.target					
+					
+■ssh　パスワード認証変更						
+					
+systemctl stop sshd					
+systemctl start sshd					
+					
+#       $OpenBSD: sshd_config,v 1.100 2016/08/15 12:32:04 naddy Exp $					
+					
+# This is the sshd server system-wide configuration file.  See					
+# sshd_config(5) for more information.					
+					
+# This sshd was compiled with PATH=/usr/local/bin:/usr/bin					
+					
+# The strategy used for options in the default sshd_config shipped with					
+# OpenSSH is to specify options with their default value where					
+# possible, but leave them commented.  Uncommented options override the					
+# default value.					
+					
+# If you want to change the port on a SELinux system, you have to tell					
+# SELinux about this change.					
+# semanage port -a -t ssh_port_t -p tcp #PORTNUMBER					
+#					
+#Port 22					
+#AddressFamily any					
+#ListenAddress 0.0.0.0					
+#ListenAddress ::					
+					
+HostKey /etc/ssh/ssh_host_rsa_key					
+#HostKey /etc/ssh/ssh_host_dsa_key					
+HostKey /etc/ssh/ssh_host_ecdsa_key					
+HostKey /etc/ssh/ssh_host_ed25519_key					
+					
+# Ciphers and keying					
+#RekeyLimit default none					
+					
+# Logging					
+#SyslogFacility AUTH					
+SyslogFacility AUTHPRIV					
+#LogLevel INFO					
+					
+# Authentication:					
+					
+#LoginGraceTime 2m					
+PermitRootLogin no					
+#StrictModes yes					
+#MaxAuthTries 6					
+#MaxSessions 10					
+					
+PubkeyAuthentication yes					
+					
+# The default is to check both .ssh/authorized_keys and .ssh/authorized_keys2					
+# but this is overridden so installations will only check .ssh/authorized_keys					
+AuthorizedKeysFile .ssh/authorized_keys					
+					
+#AuthorizedPrincipalsFile none					
+					
+#AuthorizedKeysCommand none					
+#AuthorizedKeysCommandUser nobody					
+					
+# For this to work you will also need host keys in /etc/ssh/ssh_known_hosts					
+#HostbasedAuthentication no					
+# Change to yes if you don't trust ~/.ssh/known_hosts for					
+# HostbasedAuthentication					
+#IgnoreUserKnownHosts no					
+# Don't read the user's ~/.rhosts and ~/.shosts files					
+#IgnoreRhosts yes					
+					
+# To disable tunneled clear text passwords, change to no here!					
+PasswordAuthentication yes					
+PermitEmptyPasswords no					
+# PasswordAuthentication no					
+					
+# Change to no to disable s/key passwords					
+#ChallengeResponseAuthentication yes					
+ChallengeResponseAuthentication no					
+					
+# Kerberos options					
+#KerberosAuthentication no					
+#KerberosOrLocalPasswd yes					
+#KerberosTicketCleanup yes					
+#KerberosGetAFSToken no					
+#KerberosUseKuserok yes					
+					
+# GSSAPI options					
+GSSAPIAuthentication yes					
+GSSAPICleanupCredentials no					
+#GSSAPIStrictAcceptorCheck yes					
+#GSSAPIKeyExchange no					
+#GSSAPIEnablek5users no					
+					
+# Set this to 'yes' to enable PAM authentication, account processing,					
+# and session processing. If this is enabled, PAM authentication will					
+# be allowed through the ChallengeResponseAuthentication and					
+# PasswordAuthentication.  Depending on your PAM configuration,					
+# PAM authentication via ChallengeResponseAuthentication may bypass					
+# the setting of "PermitRootLogin without-password".					
+# If you just want the PAM account and session checks to run without					
+# PAM authentication, then enable this but set PasswordAuthentication					
+# and ChallengeResponseAuthentication to 'no'.					
+# WARNING: 'UsePAM no' is not supported in Red Hat Enterprise Linux and may cause several					
+# problems.					
+UsePAM yes					
+					
+#AllowAgentForwarding yes					
+#AllowTcpForwarding yes					
+#GatewayPorts no					
+X11Forwarding yes					
+#X11DisplayOffset 10					
+#X11UseLocalhost yes					
+#PermitTTY yes					
+#PrintMotd yes					
+#PrintLastLog yes					
+#TCPKeepAlive yes					
+#UseLogin no					
+#UsePrivilegeSeparation sandbox					
+#PermitUserEnvironment no					
+#Compression delayed					
+#ClientAliveInterval 0					
+#ClientAliveCountMax 3					
+#ShowPatchLevel no					
+#UseDNS yes					
+#PidFile /var/run/sshd.pid					
+#MaxStartups 10:30:100					
+#PermitTunnel no					
+#ChrootDirectory none					
+#VersionAddendum none					
+					
+# no default banner path					
+#Banner none					
+					
+# Accept locale-related environment variables					
+AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES					
+AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT					
+AcceptEnv LC_IDENTIFICATION LC_ALL LANGUAGE					
+AcceptEnv XMODIFIERS					
+					
+# override default of no subsystems					
+Subsystem sftp  /usr/libexec/openssh/sftp-server					
+					
+# Example of overriding settings on a per-user basis					
+#Match User anoncvs					
+#       X11Forwarding no					
+#       AllowTcpForwarding no					
+#       PermitTTY no					
+#       ForceCommand cvs server					
+					
+					
+■PostgreSQL Client						
+$ sudo yum install https://download.postgresql.org/pub/repos/yum/9.6/redhat/rhel-7-x86_64/pgdg-redhat96-9.6-3.noarch.rpm					
+$ sudo yum install postgresql					
+					
+■Zabbix Server (Postgres)						
+					
+$ sudo yum install http://repo.zabbix.com/zabbix/3.4/rhel/7/x86_64/zabbix-release-3.4-2.el7.noarch.rpm					
+$ sudo yum install https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm					
+$ sudo yum install http://ftp.jaist.ac.jp/pub/Linux/Fedora/epel/7/x86_64/Packages/e/epel-release-7-11.noarch.rpm					
+$ sudo yum-config-manager --enable rhui-REGION-rhel-server-optional					
+$ sudo yum -y install php-mbstring zabbix-server-pgsql zabbix-web-pgsql zabbix-web-japanese					
+					
+$ zcat /usr/share/doc/zabbix-server-pgsql-3.4.15/create.sql.gz | psql -h mp-batch-job-db.cvhcrfijwp0o.ap-northeast-1.rds.amazonaws.com -U zabbix zabbix -W					
+					
+					
+■Zabbix Agent						
+yum -y install zabbix-agent					
+					
+zabbix_agentd.confの設定変更箇所は 					
+/etc/zabbix/zabbix_agentd.conf					
++ Server= 				10.111.166.39	
+    + zabbixサーバのIPアドレス					
++ ServerActive=				10.111.166.39	
+    + アクティブチェック用のZabbixサーバのIP:ポート					
++ Hostname=				pmp-zabbix01	
+    + zabbixサーバで表示するホスト名					
+    + ※注意：サーバで設定するホスト名と一致させる事					
+					
+systemctl start zabbix-agent					
+systemctl status  zabbix-agent					
+systemctl enable zabbix-agent					
+					

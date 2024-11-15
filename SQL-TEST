@@ -1,0 +1,61 @@
+package com.demo.db;
+
+import java.util.List;
+
+public class ParsedSQL {
+    private final String jdbcSQL;
+    private final List<Integer> whereParameters;
+    private final List<Integer> dataParameters;
+
+    public ParsedSQL(String jdbcSQL, List<Integer> whereParameters, List<Integer> dataParameters) {
+        this.jdbcSQL = jdbcSQL;
+        this.whereParameters = whereParameters;
+        this.dataParameters = dataParameters;
+    }
+
+    public String getJdbcSQL() {
+        return jdbcSQL;
+    }
+
+    public List<Integer> getWhereParameters() {
+        return whereParameters;
+    }
+
+    public List<Integer> getDataParameters() {
+        return dataParameters;
+    }
+}
+
+
+private ParsedSQL parseSQL(String rdmsSQL) {
+        StringBuilder jdbcSQL = new StringBuilder();
+        List<Integer> whereParameters = new ArrayList<>();
+        List<Integer> dataParameters = new ArrayList<>();
+
+        Pattern pattern = Pattern.compile("\\$P(\\d+)");
+        Matcher matcher = pattern.matcher(rdmsSQL);
+
+        int lastPos = 0;
+        boolean isWhereClause = false;
+
+        while (matcher.find()) {
+            jdbcSQL.append(rdmsSQL, lastPos, matcher.start());
+            jdbcSQL.append("?");
+
+            int paramIndex = Integer.parseInt(matcher.group(1));
+
+            if (rdmsSQL.substring(lastPos, matcher.start()).toUpperCase().contains("WHERE")) {
+                isWhereClause = true;
+            }
+            if (isWhereClause) {
+                whereParameters.add(paramIndex);
+            } else {
+                dataParameters.add(paramIndex);
+            }
+
+            lastPos = matcher.end();
+        }
+
+        jdbcSQL.append(rdmsSQL.substring(lastPos));
+        return new ParsedSQL(jdbcSQL.toString(), whereParameters, dataParameters);
+    }

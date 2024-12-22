@@ -1,0 +1,202 @@
+package jp.co.cobol;
+
+import java.util.*;
+import java.nio.file.*;
+
+import java.io.*;
+import java.util.*;
+
+public class CobolCopyParser {
+
+    public CobolField parse(String[] lines) {
+        Stack<CobolField> stack = new Stack<>();
+        CobolField root = null;
+
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty() || line.startsWith("*")) {
+                continue;
+            }
+
+
+            String[] tokens = line.split("\\s+");
+            int level = 0;
+            try {
+                level = Integer.parseInt(tokens[0]);
+            } catch (Exception e) {
+                continue;
+            }
+
+            String name = tokens[1];
+            CobolField field = new CobolField(name, level);
+
+            // 解析剩余的关键字
+            for (int i = 2; i < tokens.length; i++) {
+                switch (tokens[i].toUpperCase()) {
+                    case "PIC":
+                        field.setPicture(tokens[++i]);
+                        break;
+                    case "USAGE":
+                        field.setUsage(tokens[++i]);
+                        break;
+                    case "OCCURS":
+                        while (true) {
+                            if ("TO".equals(tokens[++i])) {
+                                field.setOccurs(tokens[++i]);
+                                break;
+                            }
+                        }
+                        break;
+                    case "DEPENDING":
+                        i++;
+                        field.setDependingOn(tokens[++i]);
+                        break;
+                }
+            }
+
+            while (!stack.isEmpty() && stack.peek().getLevel() >= level) {
+                stack.pop();
+            }
+
+            if (stack.isEmpty()) {
+                root = field;
+            } else {
+                stack.peek().addChild(field);
+            }
+
+            stack.push(field);
+        }
+
+        return root;
+    }
+
+    public static void main(String[] args) {
+        // 示例 COPY 内容
+        String[] copyLines = {
+                "01 TEST-GROUP",
+                "    03 TEST-CNT    PIC 9(10)  USAGE COMP",
+                "    03 TEST-01 OCCURS 20 TO 90 TIMES",
+                "        DEPENDING ON TEST-CNT",
+                "        05 FILLER PIC X(4)"
+        };
+
+        CobolCopyParser parser = new CobolCopyParser();
+        CobolField root = parser.parse(copyLines);
+
+        // 打印解析结果
+        System.out.println(root);
+    }
+}
+
+class CobolField {
+    private String name;              // 字段名称
+    private int level;                // 层级号 (如 01, 03)
+    private String picture;           // PIC 子句
+    private String usage;             // USAGE 子句
+    private String occurs;            // OCCURS 子句
+    private String dependingOn;       // DEPENDING ON 子句
+    private int digits;                 // 桁数
+    private int bits;                   // ビット数
+    private List<CobolField> children; // 子字段
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
+    public String getPicture() {
+        return picture;
+    }
+
+    public void setPicture(String picture) {
+        this.picture = picture;
+
+        String tempPicture = picture.substring(picture.indexOf("("));
+        tempPicture = tempPicture.replace("(","").replace(")","");
+        digits = Integer.parseInt(tempPicture);
+    }
+
+    public String getUsage() {
+        return usage;
+    }
+
+    public void setUsage(String usage) {
+        this.usage = usage;
+    }
+
+    public String getOccurs() {
+        return occurs;
+    }
+
+    public void setOccurs(String occurs) {
+        this.occurs = occurs;
+    }
+
+    public String getDependingOn() {
+        return dependingOn;
+    }
+
+    public void setDependingOn(String dependingOn) {
+        this.dependingOn = dependingOn;
+    }
+
+    public List<CobolField> getChildren() {
+        return children;
+    }
+
+    public void setChildren(List<CobolField> children) {
+        this.children = children;
+    }
+
+    public int getDigits() {
+        return digits;
+    }
+
+    public void setDigits(int digits) {
+        this.digits = digits;
+    }
+
+    public int getBits() {
+        return bits;
+    }
+
+    public void setBits(int bits) {
+        this.bits = bits;
+    }
+
+    public CobolField(String name, int level) {
+        this.name = name;
+        this.level = level;
+        this.children = new ArrayList<>();
+    }
+
+    // Getters, setters, and addChild method omitted for brevity...
+    public void addChild(CobolField child) {
+        this.children.add(child);
+    }
+
+    @Override
+    public String toString() {
+        return "CobolField{" +
+                "name='" + name + '\'' +
+                ", level=" + level +
+                ", picture='" + picture + '\'' +
+                ", digits='" + digits + '\'' +
+                ", usage='" + usage + '\'' +
+                ", occurs='" + occurs + '\'' +
+                ", dependingOn='" + dependingOn + '\'' +
+                ", children=" + children +
+                '}';
+    }
+}

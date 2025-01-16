@@ -1,0 +1,553 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.lakala.payment</groupId>
+    <artifactId>multi-payment-batch</artifactId>
+    <version>1.0.0</version>
+
+    <properties>
+        <!-- 利用するJavaのバージョン -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <profiles>
+        <!-- 開発環境 -->
+        <profile>
+            <id>development</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <env.dir>development</env.dir>
+                <db.adminUser>postgres</db.adminUser>
+                <db.adminPassword>postgres</db.adminPassword>
+                <db.user>postgres</db.user>
+                <db.userPassword>postgres</db.userPassword>
+                <db.Url>jdbc:postgresql://127.0.0.1:5432/postgres</db.Url>
+                <db.Schema>lakala_payment_db</db.Schema>
+            </properties>
+        </profile>
+        <!-- ステージング環境 -->
+        <profile>
+            <id>staging</id>
+            <properties>
+                <env.dir>staging</env.dir>
+                <db.adminUser>postgres</db.adminUser>
+                <db.adminPassword>postgres</db.adminPassword>
+                <db.user>postgres</db.user>
+                <db.userPassword>postgres</db.userPassword>
+                <db.Url>jdbc:postgresql://127.0.0.1:5432/postgres</db.Url>
+                <db.Schema>lakala_payment_db</db.Schema>
+            </properties>
+        </profile>
+        <!-- 本番環境(東京リージョン(rhel7)) -->
+        <profile>
+            <id>production</id>
+            <properties>
+                <env.dir>production</env.dir>
+                <db.adminUser>postgres</db.adminUser>
+                <db.adminPassword>postgres</db.adminPassword>
+                <db.user>postgres</db.user>
+                <db.userPassword>postgres</db.userPassword>
+                <db.Url>jdbc:postgresql://127.0.0.1:5432/postgres</db.Url>
+                <db.Schema>lakala_payment_db</db.Schema>
+            </properties>
+        </profile>
+        <!-- 本番環境(東京リージョン(rhel9)) -->
+        <profile>
+            <id>tokyo-prod-rhel9</id>
+            <properties>
+                <env.dir>tokyo-prod-rhel9</env.dir>
+                <db.adminUser>postgres</db.adminUser>
+                <db.adminPassword>postgres</db.adminPassword>
+                <db.user>postgres</db.user>
+                <db.userPassword>postgres</db.userPassword>
+                <db.Url>jdbc:postgresql://127.0.0.1:5432/postgres</db.Url>
+                <db.Schema>lakala_payment_db</db.Schema>
+            </properties>
+        </profile>
+        <!-- 本番環境(大阪リージョン(rhel7)) -->
+        <profile>
+            <id>osaka-production</id>
+            <properties>
+                <env.dir>osaka-production</env.dir>
+                <db.adminUser>postgres</db.adminUser>
+                <db.adminPassword>postgres</db.adminPassword>
+                <db.user>postgres</db.user>
+                <db.userPassword>postgres</db.userPassword>
+                <db.Url>jdbc:postgresql://127.0.0.1:5432/postgres</db.Url>
+                <db.Schema>lakala_payment_db</db.Schema>
+            </properties>
+        </profile>
+        <!-- 本番環境(大阪リージョン(rhel9)) -->
+        <profile>
+            <id>osaka-prod-rhel9</id>
+            <properties>
+                <env.dir>osaka-prod-rhel9</env.dir>
+                <db.adminUser>postgres</db.adminUser>
+                <db.adminPassword>postgres</db.adminPassword>
+                <db.user>postgres</db.user>
+                <db.userPassword>postgres</db.userPassword>
+                <db.Url>jdbc:postgresql://127.0.0.1:5432/postgres</db.Url>
+                <db.Schema>lakala_payment_db</db.Schema>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/${env.dir}/resources</directory>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+
+        <plugins>
+            <plugin>
+                <groupId>jp.co.tis.gsp</groupId>
+                <artifactId>gsp-dba-maven-plugin</artifactId>
+                <version>4.3.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.postgresql</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>42.2.5</version>
+                        <scope>runtime</scope>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <driver>org.postgresql.Driver</driver>
+                    <url>${db.Url}</url>
+                    <adminUser>${db.adminUser}</adminUser>
+                    <adminPassword>${db.adminPassword}</adminPassword>
+                    <user>${db.user}</user>
+                    <password>${db.userPassword}</password>
+                    <schema>${db.Schema}</schema>
+                    <erdFile>src/main/resources/entity/lakala_payment_db.edm</erdFile>
+                    <extraDdlDirectory>src/main/resources/extraDdl</extraDdlDirectory>
+                    <rootPackage>com.lakala.payment.app</rootPackage>
+                    <entityPackageName>entity</entityPackageName>
+                    <useAccessor>true</useAccessor>
+                    <dataDirectory>src/test/resources/data/postgres</dataDirectory>
+                    <javaFileDestDir>${project.build.directory}/generated-sources/entity</javaFileDestDir>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>default-cli</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>generate-ddl</goal>
+                            <goal>execute-ddl</goal>
+                            <goal>generate-entity</goal>
+                            <goal>load-data</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/entity</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>nablarch.fw.batch.ee.Main</mainClass>
+                        </manifest>
+                    </archive>
+                    <excludes>
+                        <exclude>*.dicon</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>distribution.xml</descriptor>
+                    </descriptors>
+                    <finalName>application-${project.version}</finalName>
+                    <appendAssemblyId>false</appendAssemblyId>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <useManifestOnlyJar>false</useManifestOnlyJar>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.0</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/com/nablarch/example/app/entity/*</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.2</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>2.5</version>
+                    <configuration>
+                        <excludes>
+                            <exclude>*.dicon</exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>jp.co.tis.gsp</groupId>
+                                        <artifactId>gsp-dba-maven-plugin</artifactId>
+                                        <versionRange>[4.3.0,)</versionRange>
+                                        <goals>
+                                            <goal>generate-ddl</goal>
+                                            <goal>execute-ddl</goal>
+                                            <goal>generate-entity</goal>
+                                            <goal>load-data</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-webdav-jackrabbit</artifactId>
+                <version>3.0.0</version>
+            </extension>
+        </extensions>
+    </build>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>com.nablarch.configuration</groupId>
+            <artifactId>nablarch-main-default-configuration</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-core-transaction</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-core-validation-ee</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.integration</groupId>
+            <artifactId>nablarch-jsr310-adaptor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-fw-batch-ee</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-fw-batch</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-common-dao</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-common-databind</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-common-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-etl</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.2.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-common-idgenerator-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.spec.javax.batch</groupId>
+            <artifactId>jboss-batch-api_1.0_spec</artifactId>
+            <version>1.0.0.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.enterprise</groupId>
+            <artifactId>cdi-api</artifactId>
+            <version>1.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>5.1.3.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.spec.javax.transaction</groupId>
+            <artifactId>jboss-transaction-api_1.2_spec</artifactId>
+            <version>1.0.0.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jberet</groupId>
+            <artifactId>jberet-core</artifactId>
+            <version>1.2.2.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.marshalling</groupId>
+            <artifactId>jboss-marshalling</artifactId>
+            <version>1.4.10.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.weld</groupId>
+            <artifactId>weld-core</artifactId>
+            <version>2.2.12.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.wildfly.security</groupId>
+            <artifactId>wildfly-security-manager</artifactId>
+            <version>1.1.2.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>18.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jberet</groupId>
+            <artifactId>jberet-se</artifactId>
+            <version>1.2.0.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jboss.weld.se</groupId>
+            <artifactId>weld-se</artifactId>
+            <version>2.2.12.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.1.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-dbcp</groupId>
+            <artifactId>commons-dbcp</artifactId>
+            <version>1.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>javax.el</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <version>4.2.11.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-web</artifactId>
+            <version>4.2.11.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-config</artifactId>
+            <version>4.2.11.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-core</artifactId>
+            <version>1.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.framework</groupId>
+            <artifactId>nablarch-testing</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.configuration</groupId>
+            <artifactId>nablarch-testing-default-configuration</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.nablarch.integration</groupId>
+            <artifactId>nablarch-jboss-logging-adaptor</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
+            <version>1.4.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.8.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+
+        <!-- <dependency> <groupId>net.lingala.zip4j</groupId> <artifactId>zip4j</artifactId> <version>1.3.3</version> </dependency> -->
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.nablarch.profile</groupId>
+                <artifactId>nablarch-bom</artifactId>
+                <version>5u13</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </reporting>
+
+</project>

@@ -1,0 +1,27 @@
+@startuml
+!theme materia
+skinparam sequence {
+  ParticipantFontColor #ff0000
+  ParticipantBackgroundColor #add8e6
+  ParticipantBorderColor #8b0000
+}
+participant メイン処理 #00ff00
+メイン処理 -> 業務プログラム : <color: #FF4F02>業務処理開始
+group フレームワークトランザクション
+業務プログラム -> HDIR: キー検索
+HDIR -> "DMSユーティリティ（ASM）": データ転送等
+"DMSユーティリティ（ASM）" --> HDIR: 処理結果
+HDIR -> "AIS-API" : キー検索
+"AIS-API" -> DMSキャッシュマネージャー : スキーマ定義情報取得
+DMSキャッシュマネージャー --> "AIS-API"   : スキーマ定義情報
+"AIS-API" -> SQLマネージャー : SQL生成
+SQLマネージャー --> "AIS-API"   : 生成したSQL
+"AIS-API" -> Oracleデータベース : SQL実行
+Oracleデータベース --> "AIS-API"   : SQL実行結果
+"AIS-API" -> DMSキャッシュマネージャー : キャッシュ更新
+DMSキャッシュマネージャー --> "AIS-API"   : キャッシュ更新結果
+"AIS-API" -> HDIR : キー検索結果
+HDIR -> 業務プログラム : キー検索結果
+end
+業務プログラム -> メイン処理 : 業務処理終了
+@enduml

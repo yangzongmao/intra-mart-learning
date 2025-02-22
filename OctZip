@@ -229,3 +229,31 @@ public class BinToOctTest {
 		return sb.toString();
 	}
 }
+
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
+@AllArgsConstructor
+public class IntervalDto {
+	String octData;
+	int startIndex = 0;
+	int endIndex = 0;
+}
+
+
+import java.util.List;
+import java.util.Map;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
+public class CompressResult {
+	private Map<String, List<Integer>> octInfoMap;
+	private String compressedOct;
+}

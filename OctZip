@@ -1,0 +1,231 @@
+package jp.co.demo.charset;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.apache.commons.lang3.StringUtils;
+import org.junit.jupiter.api.Test;
+
+public class BinToOctTest {
+
+	public static void main(String args[]) throws IOException {
+	}
+
+	@Test
+	public void testCctCompress() throws IOException {
+		List<String> randomBinList = new ArrayList<String>();
+		for (int i = 0; i < 10000; i++) {
+			randomBinList.add(generateOctalString(63588));
+		}
+		long startTime = System.currentTimeMillis();
+		for (String binary : randomBinList) {
+			CompressResult compressResult = octCompress(binary);
+			CompressResult decompressResult = octDecompress(compressResult.getCompressedOct());
+			assertEquals(binary, decompressResult.getCompressedOct());
+			System.out.println("[" + binary.length() + "] >>>[" + decompressResult.getCompressedOct().length() + "]");
+		}
+		long endTime = System.currentTimeMillis();
+		System.out.println(endTime - startTime);
+	}
+
+	private static CompressResult octCompress(String octalString) {
+		List<String> compressedOct = new ArrayList<String>();
+		List<Integer> oct040RangeList = new ArrayList<Integer>();
+		List<Integer> oct000RangeList = new ArrayList<Integer>();
+		String subOct = "";
+		for (int i = 0; i < octalString.length(); i += 12) {
+			subOct = octalString.substring(i, i + 12);
+			if ("040040040040".equals(subOct)) {
+				oct040RangeList.add(i / 12);
+			} else if ("000000000000".equals(subOct)) {
+				oct000RangeList.add(i / 12);
+			} else {
+				compressedOct.add(subOct);
+			}
+		}
+
+		List<IntervalDto> oct040Intervals = findIntervals(oct040RangeList, "4");
+		List<IntervalDto> oct000Intervals = findIntervals(oct000RangeList, "0");
+		List<IntervalDto> octAllIntervals = new ArrayList<IntervalDto>();
+		octAllIntervals.addAll(oct040Intervals);
+		octAllIntervals.addAll(oct000Intervals);
+		int octIntervalsCount = octAllIntervals.size();
+
+		StringBuilder dataInfoSb = new StringBuilder();
+		dataInfoSb.append(StringUtils.leftPad(Integer.toOctalString(octalString.length() / 12), 6, '0'));
+		if (octIntervalsCount > 0) {
+			oct040Intervals.sort(Comparator.comparing(IntervalDto::getStartIndex));
+			// 削除したデータ情報（レンジ情報の個数）
+			dataInfoSb.append(StringUtils.leftPad(Integer.toOctalString(octIntervalsCount + 1), 6, '0'));
+
+			for (IntervalDto tmpIntervalDto : oct040Intervals) {
+				dataInfoSb.append(tmpIntervalDto.getOctData());
+				dataInfoSb.append(StringUtils.leftPad(Integer.toOctalString(tmpIntervalDto.getStartIndex()), 5, '0'));
+				dataInfoSb.append(StringUtils.leftPad(Integer.toOctalString(tmpIntervalDto.getEndIndex()), 6, '0'));
+			}
+		} else {
+			dataInfoSb.append("000001");
+		}
+		compressedOct.add(0, dataInfoSb.toString());
+		CompressResult compressResult = new CompressResult();
+		compressResult.setCompressedOct(StringUtils.join(compressedOct, ""));
+		return compressResult;
+	}
+
+	private static CompressResult octDecompress(String octalString) {
+		int totalSize = Integer.parseInt(octalString.substring(0, 6), 8);
+		int dataInfoSize = Integer.parseInt(octalString.substring(6, 12), 8);
+
+		List<String> dataInfoList = new ArrayList<String>();
+		if (dataInfoSize > 1) {
+			String dataInfoStr = octalString.substring(12, dataInfoSize * 12);
+			for (int i = 0; i < dataInfoStr.length(); i += 12) {
+				dataInfoList.add(dataInfoStr.substring(i, i + 12));
+			}
+		}
+
+		String compressedOctStr = octalString.substring(dataInfoSize * 12);
+		List<String> compressedOct = new ArrayList<String>();
+		for (int i = 0; i < compressedOctStr.length(); i += 12) {
+			compressedOct.add(compressedOctStr.substring(i, i + 12));
+		}
+		int startIndex = 0;
+		int endIndex = 0;
+		String insertStr = "";
+		for (String dataInfo : dataInfoList) {
+			startIndex = Integer.parseInt(dataInfo.substring(1, 6), 8);
+			endIndex = Integer.parseInt(dataInfo.substring(6), 8);
+			if (dataInfo.startsWith("0")) {
+				insertStr = "000000000000";
+			} else if (dataInfo.startsWith("4")) {
+				insertStr = "040040040040";
+			}
+			for (int i = startIndex; i <= endIndex; i++) {
+				compressedOct.add(i, insertStr);
+			}
+		}
+		CompressResult compressResult = new CompressResult();
+		compressResult.setCompressedOct(StringUtils.join(compressedOct, ""));
+		return compressResult;
+	}
+
+	private static CompressResult getOctInfo(String octalString) {
+		List<String> compressedOct = new ArrayList<String>();
+		List<Integer> oct040RangeList = new ArrayList<Integer>();
+		List<Integer> oct000RangeList = new ArrayList<Integer>();
+		String subOct = "";
+		for (int i = 0; i < octalString.length(); i += 3) {
+			subOct = octalString.substring(i, i + 3);
+			if ("040".equals(subOct)) {
+				oct040RangeList.add(i / 3);
+			} else if ("000".equals(subOct)) {
+				oct000RangeList.add(i / 3);
+			} else {
+				compressedOct.add(subOct);
+			}
+		}
+
+		List<IntervalDto> oct040Intervals = findIntervals(oct040RangeList, "040");
+		List<IntervalDto> oct000Intervals = findIntervals(oct000RangeList, "000");
+		int octIntervalsCount = oct040Intervals.size() + oct000Intervals.size();
+
+		oct040Intervals.addAll(oct000Intervals);
+		oct040Intervals.sort(Comparator.comparing(IntervalDto::getStartIndex));
+
+		// 削除したデータ情報（レンジ情報の個数）
+		StringBuilder dataInfoSb = new StringBuilder();
+		dataInfoSb.append(StringUtils.leftPad(Integer.toOctalString(octIntervalsCount), 6, '0'));
+
+		for (IntervalDto tmpIntervalDto : oct040Intervals) {
+
+		}
+
+		CompressResult compressResult = new CompressResult();
+		compressResult.setCompressedOct(StringUtils.join(compressedOct, ""));
+		return compressResult;
+	}
+
+	private static List<IntervalDto> findIntervals(List<Integer> numbers, String octData) {
+		List<IntervalDto> intervals = new ArrayList<IntervalDto>();
+		if (numbers.isEmpty())
+			return intervals;
+
+		int start = numbers.get(0);
+		int end = start;
+
+		for (int i = 1; i < numbers.size(); i++) {
+			if (numbers.get(i) == end + 1) {
+				end = numbers.get(i);
+			} else {
+				intervals.add(new IntervalDto(octData, start, end));
+				start = numbers.get(i);
+				end = start;
+			}
+		}
+		intervals.add(new IntervalDto(octData, start, end));
+		return intervals;
+	}
+
+	public static String octalToBinary(String octalString) {
+		StringBuilder binaryString = new StringBuilder();
+		for (char c : octalString.toCharArray()) {
+			int decimal = Character.getNumericValue(c); // 将字符转换为数值
+			String binary = String.format("%3s", Integer.toBinaryString(decimal)).replace(' ', '0'); // 转换为3位二进制
+			binaryString.append(binary);
+		}
+		return binaryString.toString();
+	}
+
+	/**
+	 * 将 byte[] 转换为 8 进制字符串，每个 byte 用 3 位 8 进制表示
+	 * @param bytes 输入的 byte 数组
+	 * @return 8 进制字符串
+	 */
+	private static String byteArrayToOctalString(byte[] bytes) {
+		StringBuilder octalString = new StringBuilder();
+
+		for (byte b : bytes) {
+			int unsignedByte = b & 0xFF; // 转换为无符号整数 (0 ~ 255)
+			octalString.append(String.format("%03o", unsignedByte)); // 转换为 3 位 8 进制
+		}
+
+		return octalString.toString();
+	}
+
+	private String convert1(String binary) {
+		long value = Long.parseUnsignedLong(binary, 2);
+		String octal = Long.toOctalString(value);
+
+		char[] paddedOctal = new char[12];
+		int paddingLength = 12 - octal.length();
+		for (int i = 0; i < paddingLength; i++) {
+			paddedOctal[i] = '0';
+		}
+		octal.getChars(0, octal.length(), paddedOctal, paddingLength);
+		return new String(paddedOctal);
+	}
+
+	private String generate() {
+		StringBuilder sb = new StringBuilder(36);
+		Random random = new Random();
+		for (int i = 0; i < 36; i++) {
+			sb.append(random.nextInt(2)); // 生成 0 或 1
+		}
+		return sb.toString();
+	}
+
+	private static String generateOctalString(int length) {
+		StringBuilder sb = new StringBuilder(length);
+		ThreadLocalRandom random = ThreadLocalRandom.current();
+		for (int i = 0; i < length; i++) {
+			sb.append(random.nextInt(8)); // 生成 0-7 的随机数
+		}
+		return sb.toString();
+	}
+}

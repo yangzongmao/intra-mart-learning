@@ -1,0 +1,138 @@
+import java.util.*;
+
+public class LZWOctalCompression {
+    
+    // 压缩：输入 8 进制字符串，输出压缩后的 8 进制字符串
+    public static String compress(String octalInput) {
+        // 1. 先将 8 进制字符串转换为二进制
+        StringBuilder binaryInput = new StringBuilder();
+        for (char c : octalInput.toCharArray()) {
+            binaryInput.append(String.format("%3s", Integer.toBinaryString(c - '0')).replace(' ', '0'));
+        }
+
+        // 2. 进行 LZW 压缩
+        List<Integer> compressedCodes = lzwCompress(binaryInput.toString());
+
+        // 3. 将 LZW 代码转换为二进制流
+        StringBuilder compressedBinary = new StringBuilder();
+        int bitLength = 12; // 设定初始 LZW 码长（可以调整）
+        for (int code : compressedCodes) {
+            compressedBinary.append(String.format("%" + bitLength + "s", Integer.toBinaryString(code)).replace(' ', '0'));
+        }
+
+        // 4. 转换为 8 进制字符串
+        StringBuilder octalOutput = new StringBuilder();
+        for (int i = 0; i < compressedBinary.length(); i += 3) {
+            String chunk = compressedBinary.substring(i, Math.min(i + 3, compressedBinary.length()));
+            while (chunk.length() < 3) {
+                chunk += "0"; // 填充至 3 位
+            }
+            octalOutput.append(Integer.toString(Integer.parseInt(chunk, 2), 8));
+        }
+
+        return octalOutput.toString();
+    }
+
+    // 解压：输入压缩的 8 进制字符串，输出原始 8 进制字符串
+    public static String decompress(String octalInput) {
+        // 1. 先将 8 进制字符串转换回二进制
+        StringBuilder binaryInput = new StringBuilder();
+        for (char c : octalInput.toCharArray()) {
+            binaryInput.append(String.format("%3s", Integer.toBinaryString(c - '0')).replace(' ', '0'));
+        }
+
+        // 2. 拆分为 12-bit 的 LZW 码
+        List<Integer> compressedCodes = new ArrayList<>();
+        int bitLength = 12; // 设定 LZW 码长
+        for (int i = 0; i < binaryInput.length(); i += bitLength) {
+            if (i + bitLength <= binaryInput.length()) {
+                int code = Integer.parseInt(binaryInput.substring(i, i + bitLength), 2);
+                compressedCodes.add(code);
+            }
+        }
+
+        // 3. 进行 LZW 解压
+        String binaryOutput = lzwDecompress(compressedCodes);
+
+        // 4. 转换回 8 进制字符串
+        StringBuilder octalOutput = new StringBuilder();
+        for (int i = 0; i < binaryOutput.length(); i += 3) {
+            String chunk = binaryOutput.substring(i, Math.min(i + 3, binaryOutput.length()));
+            while (chunk.length() < 3) {
+                chunk += "0"; // 补足 3 位
+            }
+            octalOutput.append(Integer.toString(Integer.parseInt(chunk, 2), 8));
+        }
+
+        return octalOutput.toString();
+    }
+
+    // LZW 压缩算法
+    private static List<Integer> lzwCompress(String input) {
+        Map<String, Integer> dictionary = new HashMap<>();
+        for (int i = 0; i < 256; i++) {
+            dictionary.put("" + (char) i, i);
+        }
+
+        List<Integer> output = new ArrayList<>();
+        String w = "";
+        int dictSize = 256;
+        for (char c : input.toCharArray()) {
+            String wc = w + c;
+            if (dictionary.containsKey(wc)) {
+                w = wc;
+            } else {
+                output.add(dictionary.get(w));
+                dictionary.put(wc, dictSize++);
+                w = "" + c;
+            }
+        }
+
+        if (!w.isEmpty()) {
+            output.add(dictionary.get(w));
+        }
+
+        return output;
+    }
+
+    // LZW 解压缩算法
+    private static String lzwDecompress(List<Integer> compressed) {
+        Map<Integer, String> dictionary = new HashMap<>();
+        for (int i = 0; i < 256; i++) {
+            dictionary.put(i, "" + (char) i);
+        }
+
+        int dictSize = 256;
+        String w = "" + (char) (int) compressed.remove(0);
+        StringBuilder result = new StringBuilder(w);
+        for (int k : compressed) {
+            String entry;
+            if (dictionary.containsKey(k)) {
+                entry = dictionary.get(k);
+            } else if (k == dictSize) {
+                entry = w + w.charAt(0);
+            } else {
+                throw new IllegalArgumentException("Bad LZW code: " + k);
+            }
+
+            result.append(entry);
+            dictionary.put(dictSize++, w + entry.charAt(0));
+            w = entry;
+        }
+
+        return result.toString();
+    }
+
+    public static void main(String[] args) {
+        String octalString = "12345670123456701234567012345670"; // 示例 8 进制字符串
+
+        String compressed = compress(octalString);
+        System.out.println("压缩后: " + compressed);
+
+        String decompressed = decompress(compressed);
+        System.out.println("解压后: " + decompressed);
+
+        // 验证压缩后解压是否正确
+        System.out.println("是否还原成功: " + octalString.equals(decompressed));
+    }
+}

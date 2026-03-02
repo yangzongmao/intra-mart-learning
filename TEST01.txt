@@ -1,0 +1,284 @@
+package com.example.csvupdate.diff;
+
+/**
+ * 表示一个字段的变化
+ */
+public class ColumnDiff {
+
+    private final String column;
+    private final Object before;
+    private final Object after;
+
+    public ColumnDiff(String column, Object before, Object after) {
+        this.column = column;
+        this.before = before;
+        this.after = after;
+    }
+
+    public String getColumn() { return column; }
+    public Object getBefore() { return before; }
+    public Object getAfter() { return after; }
+
+    public boolean isChanged() {
+        return true;
+    }
+}
+
+package com.example.csvupdate.diff;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 一行数据的差异
+ */
+public class RowDiff {
+
+    private final String pk;
+    private final List<ColumnDiff> changes = new ArrayList<>();
+
+    private boolean notFound;
+
+    public RowDiff(String pk) {
+        this.pk = pk;
+    }
+
+    public static RowDiff notFound(String pk) {
+        RowDiff r = new RowDiff(pk);
+        r.notFound = true;
+        return r;
+    }
+
+    public void addChange(String column, Object before, Object after) {
+        changes.add(new ColumnDiff(column, before, after));
+    }
+
+    public boolean hasChanges() {
+        return !changes.isEmpty();
+    }
+
+    public String getPk() { return pk; }
+    public List<ColumnDiff> getChanges() { return changes; }
+    public boolean isNotFound() { return notFound; }
+}
+
+package com.example.csvupdate.diff;
+
+/**
+ * Diff统计结果（用于画面显示）
+ */
+public class DiffSummary {
+
+    private int total;
+    private int changed;
+    private int unchanged;
+    private int notFound;
+
+    public void incTotal() { total++; }
+    public void incChanged() { changed++; }
+    public void incUnchanged() { unchanged++; }
+    public void incNotFound() { notFound++; }
+
+    // getter省略
+}
+
+package com.example.csvupdate.diff;
+
+import java.util.List;
+
+/**
+ * Diff执行上下文
+ */
+public class DiffContext {
+
+    /** 主键列 */
+    private List<String> pkColumns;
+
+    /** 允许比较列 */
+    private List<String> compareColumns;
+
+    public DiffContext(List<String> pkColumns,
+                       List<String> compareColumns) {
+        this.pkColumns = pkColumns;
+        this.compareColumns = compareColumns;
+    }
+
+    public List<String> getPkColumns() {
+        return pkColumns;
+    }
+
+    public List<String> getCompareColumns() {
+        return compareColumns;
+    }
+}
+
+package com.example.csvupdate.diff;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 构造统一主键字符串
+ */
+public class PkBuilder {
+
+    private static final String SEP = "|";
+
+    public static String build(
+            Map<String, Object> row,
+            List<String> pkColumns) {
+
+        return pkColumns.stream()
+                .map(col -> {
+                    Object v = row.get(col);
+                    return v == null ? "" : v.toString();
+                })
+                .collect(Collectors.joining(SEP));
+    }
+}
+
+package com.example.csvupdate.diff;
+
+/**
+ * 统一值比较规则
+ */
+public class ValueNormalizer {
+
+    public static String normalize(Object v) {
+
+        if (v == null) return null;
+
+        String s = v.toString().trim();
+
+        // CSV规则：NULL => null
+        if ("NULL".equalsIgnoreCase(s))
+            return null;
+
+        // 空字符串允许
+        if (s.isEmpty())
+            return "";
+
+        return s;
+    }
+
+    public static boolean equals(Object v1, Object v2) {
+        return java.util.Objects.equals(
+                normalize(v1),
+                normalize(v2)
+        );
+    }
+}
+
+package com.example.csvupdate.diff;
+
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * 通用Diff引擎
+ *
+ * 支持：
+ *  - 任意表
+ *  - 多主键
+ *  - CSV更新规则
+ *  - 高性能O(N)
+ */
+public class DiffEngine {
+
+    /**
+     * 执行Diff
+     */
+    public DiffResult diff(
+            List<Map<String,Object>> csvRows,
+            List<Map<String,Object>> dbRows,
+            DiffContext context) {
+
+        // ========= 1. 构建DB索引 =========
+
+        Map<String, Map<String,Object>> dbIndex =
+                dbRows.stream()
+                        .collect(Collectors.toMap(
+                                r -> PkBuilder.build(
+                                        r,
+                                        context.getPkColumns()),
+                                Function.identity()
+                        ));
+
+        List<RowDiff> diffs = new ArrayList<>();
+        DiffSummary summary = new DiffSummary();
+
+        // ========= 2. 逐行比较 =========
+
+        for (Map<String,Object> csvRow : csvRows) {
+
+            summary.incTotal();
+
+            String pk = PkBuilder.build(
+                    csvRow,
+                    context.getPkColumns());
+
+            Map<String,Object> dbRow = dbIndex.get(pk);
+
+            if (dbRow == null) {
+                diffs.add(RowDiff.notFound(pk));
+                summary.incNotFound();
+                continue;
+            }
+
+            RowDiff rowDiff = new RowDiff(pk);
+
+            // ========= 字段比较 =========
+            for (String col : context.getCompareColumns()) {
+
+                Object oldVal = dbRow.get(col);
+                Object newVal = csvRow.get(col);
+
+                if (!ValueNormalizer.equals(oldVal, newVal)) {
+
+                    rowDiff.addChange(col, oldVal, newVal);
+                }
+            }
+
+            if (rowDiff.hasChanges()) {
+                diffs.add(rowDiff);
+                summary.incChanged();
+            } else {
+                summary.incUnchanged();
+            }
+        }
+
+        return new DiffResult(diffs, summary);
+    }
+}
+
+package com.example.csvupdate.diff;
+
+import java.util.List;
+
+/**
+ * Diff结果包装
+ */
+public class DiffResult {
+
+    private final List<RowDiff> rows;
+    private final DiffSummary summary;
+
+    public DiffResult(List<RowDiff> rows,
+                      DiffSummary summary) {
+        this.rows = rows;
+        this.summary = summary;
+    }
+
+    public List<RowDiff> getRows() { return rows; }
+    public DiffSummary getSummary() { return summary; }
+}
+
+DiffContext ctx = new DiffContext(
+        pkColumns,
+        compareColumns
+);
+
+DiffResult result =
+        diffEngine.diff(csvRows, dbRows, ctx);

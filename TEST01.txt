@@ -282,3 +282,86 @@ DiffContext ctx = new DiffContext(
 
 DiffResult result =
         diffEngine.diff(csvRows, dbRows, ctx);
+
+
+
+public class GenericSqlProvider {
+
+    public String bulkUpsert(Map<String, Object> param) {
+
+        String tableName = (String) param.get("tableName");
+        List<String> columns =
+                (List<String>) param.get("columns");
+        List<String> pkColumns =
+                (List<String>) param.get("pkColumns");
+        List<Map<String, Object>> dataList =
+                (List<Map<String, Object>>) param.get("dataList");
+
+        StringBuilder sql = new StringBuilder();
+
+        // INSERT INTO table (...)
+        sql.append("INSERT INTO ")
+           .append(tableName)
+           .append(" (");
+
+        for (int i = 0; i < columns.size(); i++) {
+            sql.append(columns.get(i));
+            if (i < columns.size() - 1) {
+                sql.append(",");
+            }
+        }
+
+        sql.append(") VALUES ");
+
+        // VALUES (...)
+        for (int i = 0; i < dataList.size(); i++) {
+
+            sql.append("(");
+
+            for (int j = 0; j < columns.size(); j++) {
+
+                sql.append("#{dataList[")
+                   .append(i)
+                   .append("].")
+                   .append(columns.get(j))
+                   .append("}");
+
+                if (j < columns.size() - 1) {
+                    sql.append(",");
+                }
+            }
+
+            sql.append(")");
+
+            if (i < dataList.size() - 1) {
+                sql.append(",");
+            }
+        }
+
+        // ON DUPLICATE KEY UPDATE
+        sql.append(" ON DUPLICATE KEY UPDATE ");
+
+        boolean first = true;
+
+        for (String col : columns) {
+
+            // 主键字段不更新
+            if (pkColumns.contains(col)) {
+                continue;
+            }
+
+            if (!first) {
+                sql.append(",");
+            }
+
+            sql.append(col)
+               .append("=VALUES(")
+               .append(col)
+               .append(")");
+
+            first = false;
+        }
+
+        return sql.toString();
+    }
+}
